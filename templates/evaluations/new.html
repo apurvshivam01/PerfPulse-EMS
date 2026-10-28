@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Conduct Performance Evaluation — PerfPulse{% endblock %}
+
+{% block greeting_title %}Conduct Employee Evaluation{% endblock %}
+{% block greeting_sub %}Submit quantitative scoring across the 5 corporate performance dimensions.{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Left Column: Evaluation Scoring Form -->
+  <div class="col-lg-8">
+    <div class="saas-card p-4">
+      <h6 class="fw-bold mb-1">Performance Evaluation Metrics</h6>
+      <p class="text-muted small mb-3">Scores are weighted automatically using the official organizational formula.</p>
+
+      <form action="{{ url_for('evaluation_create') }}" method="POST" id="evalForm">
+        <!-- Hidden inputs for calculated score and category -->
+        <input type="hidden" name="total_score" id="total_score" value="0.00">
+        <input type="hidden" name="rating_category" id="rating_category" value="Needs Improvement">
+
+        <!-- Employee & Period Details -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label-clean">Employee *</label>
+            <select name="employee_id" class="form-select-clean" required>
+              <option value="">Select Employee</option>
+              {% for emp in assignable_employees %}
+                <option value="{{ emp.id }}" {% if preselected_emp_id == emp.id|string %}selected{% endif %}>
+                  {{ emp.full_name }} ({{ emp.emp_code }} &bull; {{ emp.job_position }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label-clean">Review Cycle *</label>
+            <input type="text" class="form-control-clean" name="review_period" placeholder="e.g. Q1 2026" value="Q1 2026" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label-clean">Review Date *</label>
+            <input type="date" class="form-control-clean" name="review_date" value="{{ today_date }}" required>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-3" style="font-size: 0.875rem;">Evaluation Criteria (0–100 Points Each)</h6>
+
+        <!-- Criterion 1: Task Completion (30%) -->
+        <div class="p-3 mb-3 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="fw-semibold text-dark small">1. Task Completion</span>
+              <span class="pill-status pill-excellent ms-2" style="font-size: 0.68rem;">30% Weight</span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <input type="number" class="form-control text-center fw-bold" style="width: 75px; height: 36px; border-radius: 8px;" id="task_completion" name="task_completion" min="0" max="100" value="85" required>
+              <span class="text-muted small">/ 100</span>
+            </div>
+          </div>
+          <small class="text-muted" style="font-size: 0.75rem;">Adherence to sprint deadlines, milestone delivery, and volume of executed work.</small>
+        </div>
+
+        <!-- Criterion 2: Quality of Work (25%) -->
+        <div class="p-3 mb-3 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="fw-semibold text-dark small">2. Quality of Work</span>
+              <span class="pill-status pill-excellent ms-2" style="font-size: 0.68rem;">25% Weight</span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <input type="number" class="form-control text-center fw-bold" style="width: 75px; height: 36px; border-radius: 8px;" id="quality_of_work" name="quality_of_work" min="0" max="100" value="85" required>
+              <span class="text-muted small">/ 100</span>
+            </div>
+          </div>
+          <small class="text-muted" style="font-size: 0.75rem;">Accuracy, engineering/design rigor, minimal error rates, and attention to detail.</small>
+        </div>
+
+        <!-- Criterion 3: Attendance (15%) -->
+        <div class="p-3 mb-3 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="fw-semibold text-dark small">3. Attendance & Punctuality</span>
+              <span class="pill-status pill-good ms-2" style="font-size: 0.68rem;">15% Weight</span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <input type="number" class="form-control text-center fw-bold" style="width: 75px; height: 36px; border-radius: 8px;" id="attendance" name="attendance" min="0" max="100" value="90" required>
+              <span class="text-muted small">/ 100</span>
+            </div>
+          </div>
+          <small class="text-muted" style="font-size: 0.75rem;">Consistency, meeting participation, sprint ceremony engagement, and dependability.</small>
+        </div>
+
+        <!-- Criterion 4: Teamwork (15%) -->
+        <div class="p-3 mb-3 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="fw-semibold text-dark small">4. Teamwork & Collaboration</span>
+              <span class="pill-status pill-good ms-2" style="font-size: 0.68rem;">15% Weight</span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <input type="number" class="form-control text-center fw-bold" style="width: 75px; height: 36px; border-radius: 8px;" id="teamwork" name="teamwork" min="0" max="100" value="85" required>
+              <span class="text-muted small">/ 100</span>
+            </div>
+          </div>
+          <small class="text-muted" style="font-size: 0.75rem;">Cross-functional support, mentorship, knowledge sharing, and constructive culture.</small>
+        </div>
+
+        <!-- Criterion 5: Manager Rating (15%) -->
+        <div class="p-3 mb-4 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div>
+              <span class="fw-semibold text-dark small">5. Manager Qualitative Assessment</span>
+              <span class="pill-status pill-good ms-2" style="font-size: 0.68rem;">15% Weight</span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <input type="number" class="form-control text-center fw-bold" style="width: 75px; height: 36px; border-radius: 8px;" id="manager_rating" name="manager_rating" min="0" max="100" value="85" required>
+              <span class="text-muted small">/ 100</span>
+            </div>
+          </div>
+          <small class="text-muted" style="font-size: 0.75rem;">Leadership potential, strategic initiative, and adaptability to change.</small>
+        </div>
+
+        <!-- Reviewer Comments -->
+        <div class="mb-4">
+          <label class="form-label-clean">Reviewer Comments & Performance Summary</label>
+          <textarea class="form-control-clean" name="comments" rows="3" style="height: auto;" placeholder="Summarize achievements, notable contributions, and areas of excellence..."></textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('evaluations_list') }}" class="btn-saas-secondary">Cancel</a>
+          <button type="submit" class="btn-saas-primary">
+            <i class="bi bi-check2-circle"></i> Submit Evaluation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right Column: Live Calculator Box & Formula -->
+  <div class="col-lg-4">
+    <!-- Live Calculation Card -->
+    <div class="saas-card p-4 text-center mb-4" style="background: linear-gradient(180deg, #FFFFFF 0%, #FBFBFE 100%); border-top: 4px solid var(--primary-indigo);">
+      <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+        Calculated Performance Score
+      </div>
+      <div class="display-5 fw-bold text-dark my-2" id="liveScoreDisplay">85.75</div>
+      <div>
+        <span class="pill-status pill-excellent" id="liveCategoryDisplay" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+          Excellent
+        </span>
+      </div>
+      <div class="text-muted small mt-3" style="font-size: 0.75rem;">
+        Updates dynamically as you adjust criteria inputs
+      </div>
+    </div>
+
+    <!-- Rating Scale Legend Card -->
+    <div class="saas-card p-3 mb-4">
+      <h6 class="fw-semibold small text-dark mb-2">Rating Tier Benchmarks</h6>
+      <div class="d-flex flex-column gap-2">
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="pill-status pill-outstanding" style="font-size: 0.68rem;">Outstanding</span>
+          <span class="fw-semibold text-dark">90 – 100%</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="pill-status pill-excellent" style="font-size: 0.68rem;">Excellent</span>
+          <span class="fw-semibold text-dark">80 – 89%</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="pill-status pill-good" style="font-size: 0.68rem;">Good</span>
+          <span class="fw-semibold text-dark">70 – 79%</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="pill-status pill-average" style="font-size: 0.68rem;">Average</span>
+          <span class="fw-semibold text-dark">60 – 69%</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center small">
+          <span class="pill-status pill-improvement" style="font-size: 0.68rem;">Needs Improvement</span>
+          <span class="fw-semibold text-dark">&lt; 60%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formula Reference Card -->
+    <div class="saas-card p-3 text-muted" style="font-size: 0.78rem;">
+      <div class="fw-semibold text-dark mb-1">Official Weighted Formula</div>
+      <div class="p-2 rounded font-monospace small mb-2" style="background-color: #FAFBFD; border: 1px solid var(--border-color); font-size: 0.72rem;">
+        Score = (Task × 0.30) + (Quality × 0.25) + (Attendance × 0.15) + (Teamwork × 0.15) + (Manager × 0.15)
+      </div>
+      <div>Ensures objective, balanced assessment across quantitative and cultural dimensions.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

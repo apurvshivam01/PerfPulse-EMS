@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluations Directory — PerfPulse{% endblock %}
+
+{% block greeting_title %}Performance Evaluations Directory{% endblock %}
+{% block greeting_sub %}Review multi-criteria scoring records and historical employee evaluations.{% endblock %}
+
+{% block content %}
+<!-- Search & Filter Card -->
+<div class="saas-card mb-4 p-3">
+  <div class="row g-3 align-items-center justify-content-between">
+    <div class="col-md-9">
+      <form method="GET" action="{{ url_for('evaluations_list') }}" class="row g-2 align-items-center">
+        <div class="col-sm-4">
+          <div class="header-search-box w-100">
+            <i class="bi bi-search"></i>
+            <input type="text" name="search" placeholder="Search employee..." value="{{ search_query }}">
+          </div>
+        </div>
+        <div class="col-sm-3">
+          <select name="category" class="form-select-clean" style="height: 38px; border-radius: var(--radius-full);" onchange="this.form.submit()">
+            <option value="">All Tiers</option>
+            <option value="Outstanding" {% if selected_category == 'Outstanding' %}selected{% endif %}>Outstanding (90–100%)</option>
+            <option value="Excellent" {% if selected_category == 'Excellent' %}selected{% endif %}>Excellent (80–89%)</option>
+            <option value="Good" {% if selected_category == 'Good' %}selected{% endif %}>Good (70–79%)</option>
+            <option value="Average" {% if selected_category == 'Average' %}selected{% endif %}>Average (60–69%)</option>
+            <option value="Needs Improvement" {% if selected_category == 'Needs Improvement' %}selected{% endif %}>Needs Improvement (&lt;60%)</option>
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <input type="text" name="period" class="form-control-clean" style="height: 38px; border-radius: var(--radius-full);" placeholder="Period (e.g. Q1 2026)" value="{{ selected_period }}">
+        </div>
+        <div class="col-sm-2 d-flex gap-2">
+          <button type="submit" class="btn-saas-secondary py-1 px-3" style="height: 38px;">Filter</button>
+          {% if search_query or selected_category or selected_period %}
+            <a href="{{ url_for('evaluations_list') }}" class="btn-saas-secondary py-1 px-2" style="height: 38px;" title="Reset"><i class="bi bi-x-lg"></i></a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="col-md-3 text-md-end">
+      {% if session.get('user_role') in ['Admin', 'Manager'] %}
+        <a href="{{ url_for('new_evaluation') }}" class="btn-saas-primary text-decoration-none">
+          <i class="bi bi-clipboard-plus"></i> New Evaluation
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Evaluations Table -->
+<div class="saas-card">
+  <div class="table-responsive">
+    <table class="saas-table filterable-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Cycle</th>
+          <th>Task<br><small class="text-muted fw-normal">30%</small></th>
+          <th>Quality<br><small class="text-muted fw-normal">25%</small></th>
+          <th>Attendance<br><small class="text-muted fw-normal">15%</small></th>
+          <th>Teamwork<br><small class="text-muted fw-normal">15%</small></th>
+          <th>Manager<br><small class="text-muted fw-normal">15%</small></th>
+          <th>Total Score</th>
+          <th>Rating</th>
+          <th>Date</th>
+          {% if session.get('user_role') == 'Admin' %}
+            <th class="text-end">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if reviews %}
+          {% for r in reviews %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar-sm">
+                    {{ r.emp_name[:2].upper() }}
+                  </div>
+                  <div>
+                    <a href="{{ url_for('employee_profile', emp_id=r.employee_id) }}" class="fw-semibold text-dark text-decoration-none">
+                      {{ r.emp_name }}
+                    </a>
+                    <div class="text-muted" style="font-size: 0.72rem;">{{ r.emp_code }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="text-secondary small">{{ r.dept_name or 'Unassigned' }}</span></td>
+              <td><span class="badge bg-light text-dark border">{{ r.review_period }}</span></td>
+              <td><span class="small">{{ r.task_completion }}%</span></td>
+              <td><span class="small">{{ r.quality_of_work }}%</span></td>
+              <td><span class="small">{{ r.attendance }}%</span></td>
+              <td><span class="small">{{ r.teamwork }}%</span></td>
+              <td><span class="small">{{ r.manager_rating }}%</span></td>
+              <td><span class="fw-bold fs-6 text-dark">{{ r.total_score }}%</span></td>
+              <td>
+                <span class="pill-status pill-{% if r.rating_category == 'Outstanding' %}outstanding{% elif r.rating_category == 'Excellent' %}excellent{% elif r.rating_category == 'Good' %}good{% elif r.rating_category == 'Average' %}average{% else %}improvement{% endif %}">
+                  {{ r.rating_category }}
+                </span>
+              </td>
+              <td class="small text-muted">{{ r.review_date }}</td>
+              {% if session.get('user_role') == 'Admin' %}
+                <td class="text-end">
+                  <form action="{{ url_for('evaluation_delete', review_id=r.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Archive this evaluation record?');">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm border-0" title="Delete">
+                      <i class="bi bi-trash text-danger"></i>
+                    </button>
+                  </form>
+                </td>
+              {% endif %}
+            </tr>
+            {% if r.comments %}
+              <tr>
+                <td colspan="{% if session.get('user_role') == 'Admin' %}12{% else %}11{% endif %}" class="py-2 px-3 small text-muted" style="background-color: #FAFBFD;">
+                  <i class="bi bi-chat-quote me-1 text-primary"></i> <strong>Remarks:</strong> {{ r.comments }} &bull; <span class="text-muted">Reviewer: {{ r.reviewer_name }}</span>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="12" class="text-center py-4 text-muted small">No performance evaluations match the specified criteria.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

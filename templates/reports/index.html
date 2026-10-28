@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Reports & Analytics — PerfPulse{% endblock %}
+{% block page_title %}Analytics & Reports{% endblock %}
+
+{% block content %}
+<!-- Print Header (Visible strictly in window.print()) -->
+<div class="print-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h2 class="fw-bold mb-1" style="color: #0F172A; font-size: 1.5rem;">PerfPulse &mdash; Executive Performance Report</h2>
+      <p class="text-muted mb-0" style="font-size: 0.85rem;">Generated on: {{ print_timestamp }} &bull; Internal HR Analytics Record</p>
+    </div>
+    <div class="text-end">
+      <span class="badge" style="background: #0F172A; color: #FFFFFF; font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: var(--radius-sm);">Official HR Analytics</span>
+    </div>
+  </div>
+</div>
+
+<!-- Controls & Filters (Hidden when printing) -->
+<div class="saas-card mb-4 no-print">
+  <div class="card-body-clean p-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+      <div>
+        <h5 class="fw-bold mb-1" style="color: var(--text-main); font-size: 1.15rem;">
+          <i class="bi bi-file-earmark-bar-graph me-2" style="color: var(--primary-indigo);"></i>Filter & Generate Performance Analytics
+        </h5>
+        <p class="text-muted small mb-0">Isolate review cycles by department, specific team member, score tier, or fiscal period.</p>
+      </div>
+      <div>
+        <button type="button" class="btn-saas-secondary" onclick="window.print()">
+          <i class="bi bi-printer"></i> Print / Export PDF
+        </button>
+      </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('reports_view') }}" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label-clean">Department</label>
+        <select name="dept" class="form-select-clean" style="height: 38px; font-size: 0.8125rem;">
+          <option value="">All Departments</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}" {% if selected_dept == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label-clean">Employee</label>
+        <select name="emp_id" class="form-select-clean" style="height: 38px; font-size: 0.8125rem;">
+          <option value="">All Employees</option>
+          {% for e in all_employees %}
+            <option value="{{ e.id }}" {% if selected_emp_id == e.id|string %}selected{% endif %}>{{ e.full_name }} ({{ e.emp_code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label-clean">Rating Tier</label>
+        <select name="category" class="form-select-clean" style="height: 38px; font-size: 0.8125rem;">
+          <option value="">All Ratings</option>
+          <option value="Outstanding" {% if selected_category == 'Outstanding' %}selected{% endif %}>Outstanding</option>
+          <option value="Excellent" {% if selected_category == 'Excellent' %}selected{% endif %}>Excellent</option>
+          <option value="Good" {% if selected_category == 'Good' %}selected{% endif %}>Good</option>
+          <option value="Average" {% if selected_category == 'Average' %}selected{% endif %}>Average</option>
+          <option value="Needs Improvement" {% if selected_category == 'Needs Improvement' %}selected{% endif %}>Needs Improvement</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label-clean">Review Period</label>
+        <input type="text" name="period" class="form-control-clean" style="height: 38px; font-size: 0.8125rem;" placeholder="e.g. Q1 2026" value="{{ selected_period }}">
+      </div>
+
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn-saas-primary flex-grow-1" style="height: 38px; justify-content: center;">
+          <i class="bi bi-funnel"></i> Apply
+        </button>
+        {% if selected_dept or selected_emp_id or selected_category or selected_period %}
+          <a href="{{ url_for('reports_view') }}" class="btn-saas-secondary" title="Clear Filters" style="height: 38px; padding: 0 0.75rem;">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Department Performance Summary Cards -->
+<div class="row g-3 mb-4">
+  {% for d in dept_summaries %}
+    <div class="col-md-6 col-xl-3">
+      <div class="saas-card h-100 p-3" style="border-top: 3px solid var(--primary-indigo);">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small fw-semibold text-truncate" style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;">
+            {{ d.name }}
+          </span>
+          <span class="badge" style="background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border-color); font-size: 0.7rem;">
+            {{ d.total_reviews }} reviews
+          </span>
+        </div>
+        <div class="d-flex align-items-baseline gap-2 mb-2">
+          <span class="fs-4 fw-bold" style="color: var(--text-main); letter-spacing: -0.02em;">
+            {{ d.avg_score or '0.00' }}
+          </span>
+          <span class="small text-muted" style="font-size: 0.75rem;">avg score / 100</span>
+        </div>
+        <div class="dept-bar" style="height: 6px;">
+          <div class="dept-bar-fill {% if loop.index == 1 %}bar-sage{% elif loop.index == 2 %}bar-indigo{% elif loop.index == 3 %}bar-peach{% else %}bar-sky{% endif %}" 
+               style="width: {{ d.avg_score or 0 }}%;"></div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Top & Bottom Performers Comparison -->
+<div class="row g-4 mb-4">
+  <!-- Highest Performing Employees -->
+  <div class="col-lg-6">
+    <div class="saas-card h-100">
+      <div class="card-header-clean py-3 px-4" style="background-color: var(--light-sage); border-color: #C4E5DB;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-arrow-up-circle" style="color: var(--sage-dark); font-size: 1.1rem;"></i>
+          <h6 class="mb-0 fw-semibold" style="color: var(--sage-dark); font-size: 0.95rem;">Highest Performing Employees</h6>
+        </div>
+        <span class="pill-status pill-outstanding">Top 5</span>
+      </div>
+      <div class="table-responsive">
+        <table class="saas-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Period</th>
+              <th>Score</th>
+              <th>Tier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if highest_performers %}
+              {% for h in highest_performers %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="user-avatar" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                        {{ (h.emp_name[:2]).upper() if h.emp_name else 'EM' }}
+                      </div>
+                      <span class="fw-semibold" style="color: var(--text-main); font-size: 0.85rem;">{{ h.emp_name }}</span>
+                    </div>
+                  </td>
+                  <td class="small text-muted" style="font-size: 0.8rem;">{{ h.dept_name or 'General' }}</td>
+                  <td>
+                    <span class="date-pill" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                      {{ h.review_period }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="fw-bold" style="color: var(--sage-dark); font-size: 0.9rem;">{{ h.total_score }}</span>
+                  </td>
+                  <td>
+                    <span class="pill-status pill-outstanding" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">
+                      {{ h.rating_category }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="5" class="text-center py-4 text-muted small">No performance evaluations found.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lowest Performing Employees / Needing Improvement -->
+  <div class="col-lg-6">
+    <div class="saas-card h-100">
+      <div class="card-header-clean py-3 px-4" style="background-color: var(--light-red); border-color: #F9CFD2;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-arrow-down-circle" style="color: var(--soft-red); font-size: 1.1rem;"></i>
+          <h6 class="mb-0 fw-semibold" style="color: var(--soft-red); font-size: 0.95rem;">Attention Needed / Developing</h6>
+        </div>
+        <span class="pill-status pill-improvement">Review Focus</span>
+      </div>
+      <div class="table-responsive">
+        <table class="saas-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Period</th>
+              <th>Score</th>
+              <th>Tier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if lowest_performers %}
+              {% for l in lowest_performers %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="user-avatar" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                        {{ (l.emp_name[:2]).upper() if l.emp_name else 'EM' }}
+                      </div>
+                      <span class="fw-semibold" style="color: var(--text-main); font-size: 0.85rem;">{{ l.emp_name }}</span>
+                    </div>
+                  </td>
+                  <td class="small text-muted" style="font-size: 0.8rem;">{{ l.dept_name or 'General' }}</td>
+                  <td>
+                    <span class="date-pill" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                      {{ l.review_period }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="fw-bold" style="color: var(--soft-red); font-size: 0.9rem;">{{ l.total_score }}</span>
+                  </td>
+                  <td>
+                    {% if l.rating_category == 'Average' %}
+                      <span class="pill-status pill-average" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Average</span>
+                    {% else %}
+                      <span class="pill-status pill-improvement" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">{{ l.rating_category }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="5" class="text-center py-4 text-muted small">No low-performing records found.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Filtered Evaluation History Table -->
+<div class="saas-card">
+  <div class="card-header-clean py-3 px-4">
+    <div class="d-flex align-items-center gap-2">
+      <h6 class="mb-0 fw-semibold" style="font-size: 0.95rem;">
+        <i class="bi bi-table text-primary me-2"></i>Detailed Performance Records
+      </h6>
+    </div>
+    <span class="badge" style="background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border-color); font-weight: 600;">
+      {{ report_records|length }} Total Records
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="saas-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Period</th>
+          <th>Task</th>
+          <th>Quality</th>
+          <th>Attendance</th>
+          <th>Teamwork</th>
+          <th>Manager</th>
+          <th>Score</th>
+          <th>Category</th>
+          <th>Review Date</th>
+          <th>Reviewer</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if report_records %}
+          {% for r in report_records %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.72rem;">
+                    {{ (r.emp_name[:2]).upper() if r.emp_name else 'EM' }}
+                  </div>
+                  <div>
+                    <span class="fw-semibold" style="color: var(--text-main); font-size: 0.85rem;">{{ r.emp_name }}</span>
+                    <div class="small text-muted" style="font-size: 0.7rem;">{{ r.emp_code }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge" style="background: var(--bg-page); color: var(--text-main); border: 1px solid var(--border-color); font-weight: 500; font-size: 0.72rem;">
+                  {{ r.dept_name or 'General' }}
+                </span>
+              </td>
+              <td>
+                <span class="date-pill" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                  {{ r.review_period }}
+                </span>
+              </td>
+              <td class="small text-muted" style="font-size: 0.8rem;">{{ r.task_completion }}%</td>
+              <td class="small text-muted" style="font-size: 0.8rem;">{{ r.quality_of_work }}%</td>
+              <td class="small text-muted" style="font-size: 0.8rem;">{{ r.attendance }}%</td>
+              <td class="small text-muted" style="font-size: 0.8rem;">{{ r.teamwork }}%</td>
+              <td class="small text-muted" style="font-size: 0.8rem;">{{ r.manager_rating }}%</td>
+              <td>
+                <span class="fw-bold" style="color: var(--text-main); font-size: 0.9rem;">{{ r.total_score }}</span>
+              </td>
+              <td>
+                {% if r.rating_category == 'Outstanding' %}
+                  <span class="pill-status pill-outstanding" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Outstanding</span>
+                {% elif r.rating_category == 'Excellent' %}
+                  <span class="pill-status pill-excellent" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Excellent</span>
+                {% elif r.rating_category == 'Good' %}
+                  <span class="pill-status pill-good" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Good</span>
+                {% elif r.rating_category == 'Average' %}
+                  <span class="pill-status pill-average" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Average</span>
+                {% else %}
+                  <span class="pill-status pill-improvement" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">Needs Improvement</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted" style="font-size: 0.75rem;">{{ r.review_date }}</td>
+              <td class="small text-muted" style="font-size: 0.75rem;">{{ r.reviewer_name }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="12" class="text-center py-5 text-muted">
+              <div class="py-3">
+                <i class="bi bi-funnel text-muted fs-3 mb-2 d-block"></i>
+                <div class="fw-semibold">No performance records match this filter</div>
+                <div class="small">Try resetting filter parameters to view full history.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

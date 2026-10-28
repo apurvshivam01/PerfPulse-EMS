@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}{{ emp.full_name }} — Employee Profile — PerfPulse{% endblock %}
+
+{% block greeting_title %}Employee Profile{% endblock %}
+{% block greeting_sub %}{{ emp.full_name }} &bull; {{ emp.job_position }} &bull; {{ emp.emp_code }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<div class="d-flex align-items-center gap-2 mb-3 text-muted small">
+  <a href="{{ url_for('employees_list') }}" class="text-muted text-decoration-none hover-indigo">
+    {% if session.get('user_role') == 'Manager' %}My Team{% else %}Employees{% endif %}
+  </a>
+  <span>/</span>
+  <span class="text-dark fw-medium">{{ emp.full_name }}</span>
+</div>
+
+<!-- Profile Summary Header Card -->
+<div class="saas-card mb-4 overflow-hidden">
+  <div class="p-4 bg-white">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <!-- Left: Avatar & Identity -->
+      <div class="d-flex align-items-center gap-3">
+        <div class="user-avatar" style="width: 58px; height: 58px; font-size: 1.35rem; background: var(--light-indigo); color: var(--primary-indigo); font-weight: 700;">
+          {{ emp.full_name[:2].upper() }}
+        </div>
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <h4 class="fw-bold mb-0 text-dark" style="letter-spacing: -0.02em;">{{ emp.full_name }}</h4>
+            <span class="badge" style="background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border-color); font-weight: 600; font-size: 0.72rem;">
+              {{ emp.emp_code }}
+            </span>
+            <span class="pill-status {% if emp.employment_status == 'Active' %}pill-outstanding{% elif emp.employment_status == 'On Leave' %}pill-average{% else %}pill-improvement{% endif %}" style="font-size: 0.72rem;">
+              {{ emp.employment_status }}
+            </span>
+          </div>
+          <p class="text-muted small mb-0">
+            <span class="fw-medium text-dark">{{ emp.job_position }}</span> &bull; 
+            <span>{{ emp.dept_name or 'Unassigned Department' }}</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Right: Latest Performance Score Widget -->
+      <div class="d-flex align-items-center gap-3">
+        <div class="text-md-end p-2 px-3 rounded-3" style="background-color: var(--bg-page); border: 1px solid var(--border-color);">
+          <div class="small text-muted text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.04em;">Performance Rating</div>
+          {% if latest_review %}
+            <div class="d-flex align-items-baseline gap-2 justify-content-md-end">
+              <span class="fs-3 fw-bold text-dark" style="letter-spacing: -0.02em;">{{ latest_review.total_score }}%</span>
+              <span class="pill-status pill-{% if latest_review.rating_category == 'Outstanding' %}outstanding{% elif latest_review.rating_category == 'Excellent' %}excellent{% elif latest_review.rating_category == 'Good' %}good{% elif latest_review.rating_category == 'Average' %}average{% else %}improvement{% endif %}" style="font-size: 0.72rem;">
+                {{ latest_review.rating_category }}
+              </span>
+            </div>
+            <div class="small text-muted" style="font-size: 0.72rem;">Review Period: {{ latest_review.review_period }}</div>
+          {% else %}
+            <div class="text-muted small fw-medium mt-1">Pending initial review cycle</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Strip -->
+  <div class="p-3 border-top" style="background-color: #FAFBFD; border-color: var(--border-color) !important;">
+    <div class="row g-3 text-secondary small">
+      <div class="col-sm-6 col-md-3">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-envelope text-primary" style="font-size: 0.9rem;"></i>
+          <div>
+            <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase;">Email</div>
+            <div class="fw-medium text-dark text-truncate">{{ emp.email }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-telephone text-primary" style="font-size: 0.9rem;"></i>
+          <div>
+            <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase;">Phone</div>
+            <div class="fw-medium text-dark">{{ emp.phone or 'Not provided' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge text-primary" style="font-size: 0.9rem;"></i>
+          <div>
+            <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase;">Reporting Manager</div>
+            <div class="fw-medium text-dark">{{ emp.manager_name or 'Self-directed' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-calendar3 text-primary" style="font-size: 0.9rem;"></i>
+          <div>
+            <div class="text-muted" style="font-size: 0.7rem; text-transform: uppercase;">Joining Date</div>
+            <div class="fw-medium text-dark">{{ emp.joining_date }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Bar (For Admins and Managers) -->
+  {% if session.get('user_role') in ['Admin', 'Manager'] %}
+    <div class="p-2 px-3 bg-white border-top d-flex gap-2 flex-wrap" style="border-color: var(--border-color) !important;">
+      <a href="{{ url_for('new_evaluation', emp_id=emp.id) }}" class="btn-saas-primary py-1 px-3" style="font-size: 0.8rem;">
+        <i class="bi bi-clipboard-plus"></i> New Evaluation
+      </a>
+      <a href="{{ url_for('new_feedback', emp_id=emp.id) }}" class="btn-saas-secondary py-1 px-3" style="font-size: 0.8rem;">
+        <i class="bi bi-chat-left-dots"></i> Add Feedback
+      </a>
+      <a href="{{ url_for('goals_list') }}?emp_id={{ emp.id }}" class="btn-saas-secondary py-1 px-3" style="font-size: 0.8rem;">
+        <i class="bi bi-bullseye"></i> Assign Goal
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Navigation Filter Pills / Tabs -->
+<div class="d-flex align-items-center gap-2 mb-3">
+  <button class="btn-filter-pill active" id="tabBtnGoals" onclick="switchProfileTab('goals')">
+    <i class="bi bi-bullseye me-1"></i> Goals & OKRs ({{ goals|length }})
+  </button>
+  <button class="btn-filter-pill" id="tabBtnReviews" onclick="switchProfileTab('reviews')">
+    <i class="bi bi-clipboard-check me-1"></i> Evaluations ({{ reviews|length }})
+  </button>
+  <button class="btn-filter-pill" id="tabBtnFeedback" onclick="switchProfileTab('feedback')">
+    <i class="bi bi-chat-square-text me-1"></i> Manager Feedback ({{ feedbacks|length }})
+  </button>
+</div>
+
+<!-- Tab Content Container 1: Goals & OKRs -->
+<div id="sectionGoals">
+  <div class="saas-card">
+    <div class="card-header-clean py-3 px-4">
+      <h6 class="mb-0 fw-semibold" style="font-size: 0.95rem;">
+        <i class="bi bi-bullseye text-primary me-2"></i>Assigned Goals & Key Results
+      </h6>
+      <span class="badge" style="background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border-color); font-weight: 600;">
+        {{ goals|length }} Deliverables
+      </span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="saas-table">
+        <thead>
+          <tr>
+            <th>Goal Title</th>
+            <th>Priority</th>
+            <th>Assigned Date</th>
+            <th>Deadline</th>
+            <th>Status</th>
+            <th>Progress</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if goals %}
+            {% for g in goals %}
+              <tr>
+                <td style="max-width: 320px;">
+                  <div class="fw-semibold text-dark">{{ g.title }}</div>
+                  <div class="small text-muted text-truncate" style="font-size: 0.75rem;">{{ g.description or 'No extra notes provided' }}</div>
+                </td>
+                <td>
+                  {% if g.priority == 'High' %}
+                    <span class="pill-status pill-improvement" style="font-size: 0.7rem;">High</span>
+                  {% elif g.priority == 'Medium' %}
+                    <span class="pill-status pill-average" style="font-size: 0.7rem;">Medium</span>
+                  {% else %}
+                    <span class="pill-status" style="background: var(--bg-page); color: var(--text-muted); font-size: 0.7rem;">Low</span>
+                  {% endif %}
+                </td>
+                <td class="small text-muted">{{ g.assigned_date }}</td>
+                <td class="small fw-semibold text-dark">{{ g.deadline }}</td>
+                <td>
+                  <span class="pill-status {% if g.status == 'Completed' %}pill-outstanding{% elif g.status == 'In Progress' %}pill-excellent{% else %}pill-average{% endif %}">
+                    {{ g.status }}
+                  </span>
+                </td>
+                <td style="min-width: 140px;">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="dept-bar flex-grow-1" style="height: 6px;">
+                      <div class="dept-bar-fill {% if g.completion_percentage == 100 %}bar-sage{% elif g.completion_percentage > 50 %}bar-indigo{% else %}bar-peach{% endif %}" 
+                           style="width: {{ g.completion_percentage }}%;"></div>
+                    </div>
+                    <span class="small fw-semibold text-muted" style="font-size: 0.75rem;">{{ g.completion_percentage }}%</span>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-5 text-muted small">
+                <i class="bi bi-flag text-secondary fs-3 d-block mb-1"></i>
+                No active or completed goals assigned to this employee.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Content Container 2: Evaluations -->
+<div id="sectionReviews" style="display: none;">
+  <div class="saas-card">
+    <div class="card-header-clean py-3 px-4">
+      <h6 class="mb-0 fw-semibold" style="font-size: 0.95rem;">
+        <i class="bi bi-clipboard-check text-primary me-2"></i>Performance Evaluations History
+      </h6>
+      <span class="badge" style="background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border-color); font-weight: 600;">
+        {{ reviews|length }} Reviews
+      </span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="saas-table">
+        <thead>
+          <tr>
+            <th>Review Cycle</th>
+            <th>Reviewer</th>
+            <th>Task (30%)</th>
+            <th>Quality (25%)</th>
+            <th>Attendance (15%)</th>
+            <th>Teamwork (15%)</th>
+            <th>Manager (15%)</th>
+            <th>Total Score</th>
+            <th>Rating Tier</th>
+            <th>Review Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if reviews %}
+            {% for r in reviews %}
+              <tr>
+                <td><span class="date-pill" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">{{ r.review_period }}</span></td>
+                <td><span class="small fw-medium text-dark">{{ r.reviewer_name }}</span></td>
+                <td class="small">{{ r.task_completion }}%</td>
+                <td class="small">{{ r.quality_of_work }}%</td>
+                <td class="small">{{ r.attendance }}%</td>
+                <td class="small">{{ r.teamwork }}%</td>
+                <td class="small">{{ r.manager_rating }}%</td>
+                <td><span class="fw-bold" style="font-size: 0.9rem; color: var(--text-main);">{{ r.total_score }}%</span></td>
+                <td>
+                  <span class="pill-status pill-{% if r.rating_category == 'Outstanding' %}outstanding{% elif r.rating_category == 'Excellent' %}excellent{% elif r.rating_category == 'Good' %}good{% elif r.rating_category == 'Average' %}average{% else %}improvement{% endif %}">
+                    {{ r.rating_category }}
+                  </span>
+                </td>
+                <td class="small text-muted">{{ r.review_date }}</td>
+              </tr>
+              {% if r.comments %}
+                <tr>
+                  <td colspan="10" class="py-2 px-4 small" style="background-color: #FAFBFD; border-bottom: 1px solid var(--border-color);">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-chat-quote text-primary"></i>
+                      <span class="text-muted"><strong>Reviewer Feedback:</strong> {{ r.comments }}</span>
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="10" class="text-center py-5 text-muted small">
+                <i class="bi bi-file-earmark-check text-secondary fs-3 d-block mb-1"></i>
+                No formal performance reviews logged for this employee yet.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Content Container 3: Manager Feedback -->
+<div id="sectionFeedback" style="display: none;">
+  {% if feedbacks %}
+    <div class="row g-4">
+      {% for fb in feedbacks %}
+        <div class="col-lg-6">
+          <div class="saas-card h-100 d-flex flex-column">
+            <!-- Header -->
+            <div class="card-header-clean py-3 px-4" style="background-color: #FAFBFD;">
+              <div>
+                <div class="fw-semibold text-dark" style="font-size: 0.9rem;">Reviewer: {{ fb.manager_name }}</div>
+                <div class="text-muted small" style="font-size: 0.75rem;">Recorded in PerfPulse</div>
+              </div>
+              <span class="date-pill" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                <i class="bi bi-calendar3"></i> {{ fb.feedback_date }}
+              </span>
+            </div>
+
+            <!-- Body -->
+            <div class="card-body-clean p-4 flex-grow-1 d-flex flex-column gap-3">
+              <div>
+                <span class="pill-status pill-outstanding mb-2" style="font-size: 0.7rem;">
+                  <i class="bi bi-hand-thumbs-up"></i> Key Strengths
+                </span>
+                <div class="p-3 rounded-3" style="background: var(--bg-page); border: 1px solid var(--border-color); font-size: 0.85rem; line-height: 1.5; color: var(--text-main);">
+                  {{ fb.strengths }}
+                </div>
+              </div>
+
+              <div>
+                <span class="pill-status pill-improvement mb-2" style="font-size: 0.7rem;">
+                  <i class="bi bi-arrow-up-right-circle"></i> Growth Areas
+                </span>
+                <div class="p-3 rounded-3" style="background: var(--bg-page); border: 1px solid var(--border-color); font-size: 0.85rem; line-height: 1.5; color: var(--text-main);">
+                  {{ fb.areas_for_improvement }}
+                </div>
+              </div>
+
+              {% if fb.recommendations %}
+                <div>
+                  <span class="pill-status pill-excellent mb-2" style="font-size: 0.7rem;">
+                    <i class="bi bi-lightbulb"></i> Recommendations & Action Plan
+                  </span>
+                  <div class="p-3 rounded-3" style="background: var(--light-indigo); border: 1px solid #D5D2FF; font-size: 0.85rem; line-height: 1.5; color: var(--primary-indigo);">
+                    {{ fb.recommendations }}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="saas-card p-5 text-center text-muted">
+      <div class="podium-trophy-circle trophy-silver mx-auto mb-3" style="width: 56px; height: 56px;">
+        <i class="bi bi-chat-heart" style="font-size: 1.5rem; color: var(--text-muted);"></i>
+      </div>
+      <h6 class="fw-semibold mb-1" style="color: var(--text-main);">No Qualitative Feedback Recorded</h6>
+      <p class="text-muted small mb-0" style="max-width: 400px; margin: 0 auto;">
+        Supervisors can record coaching notes, strengths, and personal growth recommendations for this employee.
+      </p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function switchProfileTab(tab) {
+    document.getElementById('sectionGoals').style.display = (tab === 'goals') ? 'block' : 'none';
+    document.getElementById('sectionReviews').style.display = (tab === 'reviews') ? 'block' : 'none';
+    document.getElementById('sectionFeedback').style.display = (tab === 'feedback') ? 'block' : 'none';
+
+    document.getElementById('tabBtnGoals').classList.toggle('active', tab === 'goals');
+    document.getElementById('tabBtnReviews').classList.toggle('active', tab === 'reviews');
+    document.getElementById('tabBtnFeedback').classList.toggle('active', tab === 'feedback');
+  }
+</script>
+{% endblock %}

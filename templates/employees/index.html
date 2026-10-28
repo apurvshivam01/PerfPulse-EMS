@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Directory — PerfPulse{% endblock %}
+
+{% block greeting_title %}{% if session.get('user_role') == 'Manager' %}My Team Directory{% else %}Employee Directory{% endif %}{% endblock %}
+{% block greeting_sub %}Manage organizational personnel, roles, and departmental assignments.{% endblock %}
+
+{% block content %}
+<!-- Search & Action Bar -->
+<div class="saas-card mb-4 p-3">
+  <div class="row g-3 align-items-center justify-content-between">
+    <div class="col-md-8">
+      <form method="GET" action="{{ url_for('employees_list') }}" class="row g-2 align-items-center">
+        <div class="col-sm-5">
+          <div class="header-search-box w-100">
+            <i class="bi bi-search"></i>
+            <input type="text" name="search" placeholder="Search name, code, role..." value="{{ search_query }}">
+          </div>
+        </div>
+        {% if session.get('user_role') == 'Admin' %}
+          <div class="col-sm-4">
+            <select name="dept" class="form-select-clean" style="height: 38px; border-radius: var(--radius-full);" onchange="this.form.submit()">
+              <option value="">All Departments</option>
+              {% for d in departments %}
+                <option value="{{ d.id }}" {% if selected_dept == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="col-sm-3 d-flex gap-2">
+          <button type="submit" class="btn-saas-secondary py-1 px-3" style="height: 38px;">Filter</button>
+          {% if search_query or selected_dept %}
+            <a href="{{ url_for('employees_list') }}" class="btn-saas-secondary py-1 px-2" style="height: 38px;" title="Reset"><i class="bi bi-x-lg"></i></a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="col-md-4 text-md-end">
+      {% if session.get('user_role') == 'Admin' %}
+        <button type="button" class="btn-saas-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+          <i class="bi bi-person-plus"></i> Add Employee
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Employee Table -->
+<div class="saas-card">
+  <div class="table-responsive">
+    <table class="saas-table filterable-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Code</th>
+          <th>Department</th>
+          <th>Job Position</th>
+          <th>Reporting Manager</th>
+          <th>Joining Date</th>
+          <th>Status</th>
+          <th>Latest Score</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if employees %}
+          {% for emp in employees %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar-sm">
+                    {{ emp.full_name[:2].upper() }}
+                  </div>
+                  <div>
+                    <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="fw-semibold text-dark text-decoration-none">
+                      {{ emp.full_name }}
+                    </a>
+                    <div class="text-muted" style="font-size: 0.75rem;">{{ emp.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ emp.emp_code }}</span></td>
+              <td><span class="text-secondary small">{{ emp.dept_name or 'Unassigned' }}</span></td>
+              <td><span class="text-secondary small">{{ emp.job_position }}</span></td>
+              <td>
+                {% if emp.manager_name %}
+                  <span class="small text-dark fw-medium">{{ emp.manager_name }}</span>
+                {% else %}
+                  <span class="text-muted small">None</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">{{ emp.joining_date }}</td>
+              <td>
+                {% if emp.employment_status == 'Active' %}
+                  <span class="pill-status pill-outstanding" style="font-size: 0.72rem;">Active</span>
+                {% elif emp.employment_status == 'On Leave' %}
+                  <span class="pill-status pill-average" style="font-size: 0.72rem;">On Leave</span>
+                {% else %}
+                  <span class="pill-status pill-improvement" style="font-size: 0.72rem;">Terminated</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if emp.latest_score is not none %}
+                  <div class="d-flex align-items-center gap-1">
+                    <span class="fw-bold">{{ emp.latest_score }}%</span>
+                    <span class="pill-status pill-{% if emp.rating_category == 'Outstanding' %}outstanding{% elif emp.rating_category == 'Excellent' %}excellent{% elif emp.rating_category == 'Good' %}good{% elif emp.rating_category == 'Average' %}average{% else %}improvement{% endif %}" style="font-size: 0.68rem; padding: 0.1rem 0.4rem;">
+                      {{ emp.rating_category }}
+                    </span>
+                  </div>
+                {% else %}
+                  <span class="text-muted small">Pending</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="btn btn-outline-secondary border-0" title="View Profile">
+                    <i class="bi bi-eye text-muted"></i>
+                  </a>
+                  {% if session.get('user_role') in ['Admin', 'Manager'] %}
+                    <a href="{{ url_for('new_evaluation', emp_id=emp.id) }}" class="btn btn-outline-secondary border-0" title="Evaluate">
+                      <i class="bi bi-clipboard-check text-primary"></i>
+                    </a>
+                  {% endif %}
+                  {% if session.get('user_role') == 'Admin' %}
+                    <button type="button" class="btn btn-outline-secondary border-0" data-bs-toggle="modal" data-bs-target="#editEmpModal{{ emp.id }}" title="Edit">
+                      <i class="bi bi-pencil text-muted"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary border-0" data-bs-toggle="modal" data-bs-target="#deleteEmpModal{{ emp.id }}" title="Delete">
+                      <i class="bi bi-trash text-danger"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+
+            <!-- Edit Employee Modal -->
+            {% if session.get('user_role') == 'Admin' %}
+              <div class="modal fade" id="editEmpModal{{ emp.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                  <div class="modal-content">
+                    <form action="{{ url_for('employee_edit', emp_id=emp.id) }}" method="POST">
+                      <div class="modal-header">
+                        <h6 class="modal-title fw-bold">Edit Employee — {{ emp.full_name }}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body p-4">
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Employee Code *</label>
+                            <input type="text" class="form-control-clean" name="emp_code" value="{{ emp.emp_code }}" required>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Full Name *</label>
+                            <input type="text" class="form-control-clean" name="full_name" value="{{ emp.full_name }}" required>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Email Address *</label>
+                            <input type="email" class="form-control-clean" name="email" value="{{ emp.email }}" required>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Phone</label>
+                            <input type="text" class="form-control-clean" name="phone" value="{{ emp.phone or '' }}">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Department</label>
+                            <select name="department_id" class="form-select-clean">
+                              <option value="">Select Department</option>
+                              {% for d in departments %}
+                                <option value="{{ d.id }}" {% if emp.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                              {% endfor %}
+                            </select>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Job Position *</label>
+                            <input type="text" class="form-control-clean" name="job_position" value="{{ emp.job_position }}" required>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label-clean">Assigned Manager</label>
+                            <select name="manager_id" class="form-select-clean">
+                              <option value="">No Manager / Self-Directed</option>
+                              {% for m in managers %}
+                                {% if m.id != emp.id %}
+                                  <option value="{{ m.id }}" {% if emp.manager_id == m.id %}selected{% endif %}>{{ m.full_name }}</option>
+                                {% endif %}
+                              {% endfor %}
+                            </select>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label-clean">Joining Date *</label>
+                            <input type="date" class="form-control-clean" name="joining_date" value="{{ emp.joining_date }}" required>
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label-clean">Status</label>
+                            <select name="employment_status" class="form-select-clean">
+                              <option value="Active" {% if emp.employment_status == 'Active' %}selected{% endif %}>Active</option>
+                              <option value="On Leave" {% if emp.employment_status == 'On Leave' %}selected{% endif %}>On Leave</option>
+                              <option value="Terminated" {% if emp.employment_status == 'Terminated' %}selected{% endif %}>Terminated</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn-saas-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn-saas-primary">Save Changes</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Delete Employee Modal -->
+              <div class="modal fade" id="deleteEmpModal{{ emp.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content">
+                    <form action="{{ url_for('employee_delete', emp_id=emp.id) }}" method="POST">
+                      <div class="modal-header">
+                        <h6 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Employee</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body p-4">
+                        <p class="mb-2">Are you sure you want to remove <strong>{{ emp.full_name }}</strong> ({{ emp.emp_code }})?</p>
+                        <p class="small text-muted mb-0">This will also archive associated evaluations and feedback records.</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn-saas-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger btn-sm" style="border-radius: 8px;">Confirm Delete</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-4 text-muted small">No employees found matching query.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Employee Modal (Admin Only) -->
+{% if session.get('user_role') == 'Admin' %}
+  <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form action="{{ url_for('employee_create') }}" method="POST">
+          <div class="modal-header">
+            <h6 class="modal-title fw-bold">Add New Employee</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="alert alert-info py-2 small mb-3 border" style="border-radius: 8px;">
+              <i class="bi bi-info-circle me-1"></i> A login user account will be created automatically with password <code>employee123</code>.
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label-clean">Employee Code *</label>
+                <input type="text" class="form-control-clean" name="emp_code" placeholder="EMP012" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Full Name *</label>
+                <input type="text" class="form-control-clean" name="full_name" placeholder="First & Last Name" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Email Address *</label>
+                <input type="email" class="form-control-clean" name="email" placeholder="name@company.com" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Phone</label>
+                <input type="text" class="form-control-clean" name="phone" placeholder="+1-555-0100">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Department *</label>
+                <select name="department_id" class="form-select-clean" required>
+                  <option value="">Select Department</option>
+                  {% for d in departments %}
+                    <option value="{{ d.id }}">{{ d.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Job Position *</label>
+                <input type="text" class="form-control-clean" name="job_position" placeholder="e.g. Software Engineer" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Assigned Manager</label>
+                <select name="manager_id" class="form-select-clean">
+                  <option value="">No Manager / Self-Directed</option>
+                  {% for m in managers %}
+                    <option value="{{ m.id }}">{{ m.full_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-clean">Joining Date *</label>
+                <input type="date" class="form-control-clean" name="joining_date" required>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-saas-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn-saas-primary">Create Employee</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

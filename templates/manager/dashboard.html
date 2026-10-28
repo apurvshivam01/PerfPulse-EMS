@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Team Performance Hub — PerfPulse{% endblock %}
+
+{% block greeting_title %}Team Performance Hub{% endblock %}
+{% block greeting_sub %}Track, evaluate, and coach direct reports under your management.{% endblock %}
+
+{% block content %}
+<!-- Compact KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Team Members</span>
+          <div class="kpi-icon-container kpi-icon-indigo">
+            <i class="bi bi-people"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.team_size }}</span>
+          <span class="kpi-trend-pill trend-subtle">Direct Reports</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Active supervised personnel</div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Team Average</span>
+          <div class="kpi-icon-container kpi-icon-sage">
+            <i class="bi bi-graph-up"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.team_avg_score }}%</span>
+          <span class="pill-status pill-{{ stats.team_category_badge }}" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+            {{ stats.team_category }}
+          </span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Quarterly benchmark score</div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Pending Reviews</span>
+          <div class="kpi-icon-container kpi-icon-peach">
+            <i class="bi bi-hourglass-split"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.pending_reviews }}</span>
+          <span class="kpi-trend-pill trend-subtle">Awaiting evaluation</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Cycle review completion target</div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Needs Coaching</span>
+          <div class="kpi-icon-container kpi-icon-red">
+            <i class="bi bi-exclamation-circle"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.needs_improvement_count }}</span>
+          <span class="kpi-trend-pill trend-warning">Score below 60%</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Immediate coaching required</div>
+    </div>
+  </div>
+</div>
+
+<!-- Team Spotlight & Fast Actions -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="spotlight-card h-100 d-flex flex-column justify-content-between">
+      <div class="spotlight-accent-bar" style="background: linear-gradient(90deg, #6FAF9A, #5B5BD6);"></div>
+      <div>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <span class="pill-status pill-outstanding">
+            <i class="bi bi-award-fill text-warning"></i> Top Team Performer
+          </span>
+          <span class="text-muted small">Supervised by you</span>
+        </div>
+
+        {% if top_team_member %}
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="avatar-initials" style="background: var(--light-sage); color: var(--sage-dark);">
+              {{ top_team_member.full_name[:2].upper() }}
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0 text-dark">{{ top_team_member.full_name }}</h5>
+              <div class="small text-muted">{{ top_team_member.job_position }} &bull; {{ top_team_member.emp_code }}</div>
+            </div>
+            <div class="ms-auto text-end">
+              <div class="fs-3 fw-bold text-dark">{{ top_team_member.total_score }}%</div>
+              <span class="pill-status pill-outstanding">{{ top_team_member.rating_category }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="text-center py-3 text-muted">No evaluations submitted yet for your team.</div>
+        {% endif %}
+      </div>
+      
+      <div class="d-flex gap-2 mt-2">
+        <a href="{{ url_for('new_evaluation') }}" class="btn-saas-primary text-decoration-none py-1 px-3" style="font-size: 0.8rem;">
+          <i class="bi bi-clipboard-plus"></i> Evaluate Member
+        </a>
+        <a href="{{ url_for('new_feedback') }}" class="btn-saas-secondary text-decoration-none py-1 px-3" style="font-size: 0.8rem;">
+          <i class="bi bi-chat-left-dots"></i> Give Coaching Feedback
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="saas-card h-100 p-4 d-flex flex-column justify-content-between">
+      <div>
+        <h6 class="fw-bold mb-1">Manager Direct Actions</h6>
+        <p class="text-muted small mb-3">Quick workflow shortcuts for team leaders</p>
+        <div class="d-flex flex-column gap-2">
+          <a href="{{ url_for('new_evaluation') }}" class="btn-saas-secondary text-decoration-none">
+            <i class="bi bi-clipboard-check text-primary"></i> Conduct Performance Review
+          </a>
+          <a href="{{ url_for('goals_list') }}" class="btn-saas-secondary text-decoration-none">
+            <i class="bi bi-bullseye text-warning"></i> Assign New Team Goal
+          </a>
+          <a href="{{ url_for('feedback_list') }}" class="btn-saas-secondary text-decoration-none">
+            <i class="bi bi-chat-heart text-info"></i> View Feedback Log
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Team Scores Chart & Goal Progress Breakdown -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">Team Performance Comparison</h6>
+          <p class="text-muted small mt-1">Latest evaluation scores across team members</p>
+        </div>
+      </div>
+      <div class="card-body-clean" style="height: 300px;">
+        <canvas id="teamScoresChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">Active Team Goals</h6>
+          <p class="text-muted small mt-1">Objectives and deadline progress</p>
+        </div>
+        <a href="{{ url_for('goals_list') }}" class="btn-saas-secondary py-1 px-2 text-decoration-none" style="font-size: 0.78rem;">
+          All Goals
+        </a>
+      </div>
+      <div class="card-body-clean p-0">
+        <div class="list-group list-group-flush">
+          {% if team_goals %}
+            {% for g in team_goals[:5] %}
+              <div class="list-group-item p-3 border-0 border-bottom">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <div>
+                    <div class="fw-semibold small text-dark">{{ g.title }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">{{ g.emp_name }} &bull; Due: {{ g.deadline }}</div>
+                  </div>
+                  <span class="pill-status {% if g.status == 'Completed' %}pill-outstanding{% elif g.status == 'In Progress' %}pill-excellent{% else %}pill-average{% endif %}">
+                    {{ g.status }}
+                  </span>
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <div class="progress flex-grow-1" style="height: 5px; background: #F2F4F7;">
+                    <div class="progress-bar {% if g.completion_percentage == 100 %}bg-success{% elif g.completion_percentage > 50 %}bg-primary{% else %}bg-warning{% endif %}" 
+                         style="width: {{ g.completion_percentage }}%;"></div>
+                  </div>
+                  <span class="small text-muted" style="font-size: 0.75rem;">{{ g.completion_percentage }}%</span>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="p-4 text-center text-muted small">No goals currently assigned to team.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Team Members Directory Table -->
+<div class="saas-card">
+  <div class="card-header-clean">
+    <h6 class="mb-0">Team Members Directory</h6>
+    <span class="text-muted small">{{ team_members|length }} Direct Reports</span>
+  </div>
+  <div class="table-responsive">
+    <table class="saas-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Code</th>
+          <th>Position</th>
+          <th>Goals Active</th>
+          <th>Latest Score</th>
+          <th>Rating</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if team_members %}
+          {% for m in team_members %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar-sm">
+                    {{ m.full_name[:2].upper() }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold text-dark">{{ m.full_name }}</div>
+                    <div class="text-muted small" style="font-size: 0.75rem;">{{ m.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ m.emp_code }}</span></td>
+              <td><span class="text-secondary small">{{ m.job_position }}</span></td>
+              <td>
+                <span class="badge bg-light text-muted border">{{ m.active_goals_count }} Goals</span>
+              </td>
+              <td>
+                {% if m.latest_score is not none %}
+                  <span class="fw-bold">{{ m.latest_score }}%</span>
+                {% else %}
+                  <span class="text-muted small">Not Evaluated</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if m.rating_category == 'Outstanding' %}
+                  <span class="pill-status pill-outstanding">Outstanding</span>
+                {% elif m.rating_category == 'Excellent' %}
+                  <span class="pill-status pill-excellent">Excellent</span>
+                {% elif m.rating_category == 'Good' %}
+                  <span class="pill-status pill-good">Good</span>
+                {% elif m.rating_category == 'Average' %}
+                  <span class="pill-status pill-average">Average</span>
+                {% elif m.rating_category == 'Needs Improvement' %}
+                  <span class="pill-status pill-improvement">Needs Improvement</span>
+                {% else %}
+                  <span class="pill-status" style="background: #F2F4F7; color: var(--text-muted);">Pending</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('employee_profile', emp_id=m.id) }}" class="btn btn-outline-secondary border-0" title="Profile">
+                    <i class="bi bi-eye text-muted"></i>
+                  </a>
+                  <a href="{{ url_for('new_evaluation', emp_id=m.id) }}" class="btn btn-outline-secondary border-0" title="Evaluate">
+                    <i class="bi bi-clipboard-check text-primary"></i>
+                  </a>
+                  <a href="{{ url_for('new_feedback', emp_id=m.id) }}" class="btn btn-outline-secondary border-0" title="Feedback">
+                    <i class="bi bi-chat-dots text-info"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted small">No employees are currently assigned under your supervision.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const teamMembers = {{ chart_team_names | tojson | safe }};
+    const teamScores = {{ chart_team_scores | tojson | safe }};
+    initManagerCharts(teamMembers, teamScores);
+  });
+</script>
+{% endblock %}

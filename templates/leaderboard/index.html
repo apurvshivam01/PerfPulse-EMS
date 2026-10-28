@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Leaderboard — PerfPulse{% endblock %}
+{% block page_title %}Leaderboard{% endblock %}
+
+{% block content %}
+<!-- Top Header & Filter Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1" style="color: var(--text-main); font-size: 1.25rem;">
+      <i class="bi bi-trophy me-2" style="color: var(--peach);"></i>High Achievers Leaderboard
+    </h4>
+    <p class="text-muted small mb-0">Ranked by latest overall performance evaluation scores across teams.</p>
+  </div>
+
+  <!-- Department Filter -->
+  <form method="GET" action="{{ url_for('leaderboard') }}" class="d-flex align-items-center gap-2">
+    <div style="min-width: 200px;">
+      <select name="dept" class="form-select-clean" onchange="this.form.submit()" style="height: 38px; font-size: 0.8125rem;">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+          <option value="{{ d.id }}" {% if selected_dept == d.id|string %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if selected_dept %}
+      <a href="{{ url_for('leaderboard') }}" class="btn-saas-secondary" title="Clear Filter" style="height: 38px; padding: 0 0.75rem;">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Top 3 Podium Highlights -->
+{% if ranked_employees|length >= 3 %}
+  <div class="row g-4 mb-4 align-items-end">
+    <!-- Rank 2: Silver -->
+    <div class="col-md-4 order-2 order-md-1">
+      <div class="podium-saas podium-rank-2">
+        <div class="podium-trophy-circle trophy-silver">
+          <i class="bi bi-award"></i>
+        </div>
+        <div class="mb-2">
+          <span class="badge" style="background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: var(--radius-full);">
+            Rank #2 &bull; Silver Achiever
+          </span>
+        </div>
+        <h5 class="fw-bold mb-1" style="color: var(--text-main); font-size: 1.1rem;">
+          <a href="{{ url_for('employee_profile', emp_id=ranked_employees[1].id) }}" class="text-decoration-none" style="color: var(--text-main);">
+            {{ ranked_employees[1].full_name }}
+          </a>
+        </h5>
+        <p class="small text-muted mb-3" style="font-size: 0.8rem;">
+          {{ ranked_employees[1].job_position }} &bull; {{ ranked_employees[1].dept_name or 'General' }}
+        </p>
+
+        <div class="display-6 fw-bold mb-2" style="color: var(--text-main); letter-spacing: -0.02em;">
+          {{ ranked_employees[1].total_score }}<span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">/100</span>
+        </div>
+
+        <div>
+          {% if ranked_employees[1].rating_category == 'Outstanding' %}
+            <span class="pill-status pill-outstanding">{{ ranked_employees[1].rating_category }}</span>
+          {% elif ranked_employees[1].rating_category == 'Excellent' %}
+            <span class="pill-status pill-excellent">{{ ranked_employees[1].rating_category }}</span>
+          {% else %}
+            <span class="pill-status pill-good">{{ ranked_employees[1].rating_category }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Rank 1: Gold Champion -->
+    <div class="col-md-4 order-1 order-md-2">
+      <div class="podium-saas podium-rank-1" style="padding-top: 2.25rem; padding-bottom: 2.25rem; box-shadow: 0 8px 24px -4px rgba(233, 161, 120, 0.2), var(--shadow-subtle);">
+        <div class="podium-trophy-circle trophy-gold" style="width: 60px; height: 60px; font-size: 1.75rem;">
+          <i class="bi bi-trophy"></i>
+        </div>
+        <div class="mb-2">
+          <span class="badge" style="background: var(--light-peach); color: var(--peach-dark); border: 1px solid #FCD4BE; font-size: 0.75rem; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: var(--radius-full);">
+            👑 Rank #1 &bull; Top Performer
+          </span>
+        </div>
+        <h4 class="fw-bold mb-1" style="color: var(--text-main); font-size: 1.25rem;">
+          <a href="{{ url_for('employee_profile', emp_id=ranked_employees[0].id) }}" class="text-decoration-none" style="color: var(--text-main);">
+            {{ ranked_employees[0].full_name }}
+          </a>
+        </h4>
+        <p class="small text-muted mb-3" style="font-size: 0.825rem;">
+          {{ ranked_employees[0].job_position }} &bull; {{ ranked_employees[0].dept_name or 'General' }}
+        </p>
+
+        <div class="display-5 fw-bold mb-2" style="color: var(--peach-dark); letter-spacing: -0.02em;">
+          {{ ranked_employees[0].total_score }}<span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 500;">/100</span>
+        </div>
+
+        <div>
+          {% if ranked_employees[0].rating_category == 'Outstanding' %}
+            <span class="pill-status pill-outstanding">{{ ranked_employees[0].rating_category }}</span>
+          {% else %}
+            <span class="pill-status pill-excellent">{{ ranked_employees[0].rating_category }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Rank 3: Bronze -->
+    <div class="col-md-4 order-3 order-md-3">
+      <div class="podium-saas podium-rank-3">
+        <div class="podium-trophy-circle trophy-bronze">
+          <i class="bi bi-patch-check"></i>
+        </div>
+        <div class="mb-2">
+          <span class="badge" style="background: var(--light-sage); color: var(--sage-dark); border: 1px solid #C4E5DB; font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: var(--radius-full);">
+            Rank #3 &bull; Bronze Achiever
+          </span>
+        </div>
+        <h5 class="fw-bold mb-1" style="color: var(--text-main); font-size: 1.1rem;">
+          <a href="{{ url_for('employee_profile', emp_id=ranked_employees[2].id) }}" class="text-decoration-none" style="color: var(--text-main);">
+            {{ ranked_employees[2].full_name }}
+          </a>
+        </h5>
+        <p class="small text-muted mb-3" style="font-size: 0.8rem;">
+          {{ ranked_employees[2].job_position }} &bull; {{ ranked_employees[2].dept_name or 'General' }}
+        </p>
+
+        <div class="display-6 fw-bold mb-2" style="color: var(--text-main); letter-spacing: -0.02em;">
+          {{ ranked_employees[2].total_score }}<span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">/100</span>
+        </div>
+
+        <div>
+          {% if ranked_employees[2].rating_category == 'Outstanding' %}
+            <span class="pill-status pill-outstanding">{{ ranked_employees[2].rating_category }}</span>
+          {% elif ranked_employees[2].rating_category == 'Excellent' %}
+            <span class="pill-status pill-excellent">{{ ranked_employees[2].rating_category }}</span>
+          {% else %}
+            <span class="pill-status pill-good">{{ ranked_employees[2].rating_category }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Full Organizational Standings Table -->
+<div class="saas-card">
+  <div class="card-header-clean py-3 px-4">
+    <div class="d-flex align-items-center gap-2">
+      <h6 class="mb-0 fw-semibold" style="font-size: 0.95rem;">
+        <i class="bi bi-list-ol text-primary me-2"></i>Complete Organizational Standings
+      </h6>
+    </div>
+    <span class="badge" style="background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border-color); font-weight: 600;">
+      {{ ranked_employees|length }} Evaluated Employees
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="saas-table">
+      <thead>
+        <tr>
+          <th style="width: 70px;" class="text-center">Rank</th>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Latest Review</th>
+          <th style="width: 180px;">Performance Score</th>
+          <th>Category</th>
+          <th class="text-end" style="width: 100px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if ranked_employees %}
+          {% for emp in ranked_employees %}
+            <tr>
+              <td class="text-center">
+                {% if loop.index == 1 %}
+                  <span class="badge rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background-color: var(--light-peach); color: var(--peach-dark); font-weight: 700; border: 1px solid #FCD4BE;">1</span>
+                {% elif loop.index == 2 %}
+                  <span class="badge rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background-color: #F1F5F9; color: #475569; font-weight: 700; border: 1px solid #E2E8F0;">2</span>
+                {% elif loop.index == 3 %}
+                  <span class="badge rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background-color: var(--light-sage); color: var(--sage-dark); font-weight: 700; border: 1px solid #C4E5DB;">3</span>
+                {% else %}
+                  <span class="text-muted fw-semibold small" style="font-size: 0.8125rem;">#{{ loop.index }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                    {{ (emp.full_name[:2]).upper() if emp.full_name else 'EM' }}
+                  </div>
+                  <div>
+                    <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="fw-semibold text-decoration-none" style="color: var(--text-main);">
+                      {{ emp.full_name }}
+                    </a>
+                    <div class="small text-muted" style="font-size: 0.72rem;">{{ emp.emp_code }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge" style="background: var(--bg-page); color: var(--text-main); border: 1px solid var(--border-color); font-weight: 500; font-size: 0.75rem;">
+                  {{ emp.dept_name or 'Unassigned' }}
+                </span>
+              </td>
+              <td class="text-muted small" style="font-size: 0.8125rem;">{{ emp.job_position }}</td>
+              <td>
+                <span class="date-pill" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                  {{ emp.review_period or 'Latest' }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-bold" style="min-width: 40px; font-size: 0.875rem; color: var(--text-main);">{{ emp.total_score }}</span>
+                  <div class="dept-bar flex-grow-1" style="height: 6px;">
+                    <div class="dept-bar-fill {% if emp.total_score >= 90 %}bar-sage{% elif emp.total_score >= 80 %}bar-indigo{% elif emp.total_score >= 70 %}bar-sky{% elif emp.total_score >= 60 %}bar-peach{% else %}bg-danger{% endif %}" 
+                         style="width: {{ emp.total_score }}%;"></div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                {% if emp.rating_category == 'Outstanding' %}
+                  <span class="pill-status pill-outstanding">{{ emp.rating_category }}</span>
+                {% elif emp.rating_category == 'Excellent' %}
+                  <span class="pill-status pill-excellent">{{ emp.rating_category }}</span>
+                {% elif emp.rating_category == 'Good' %}
+                  <span class="pill-status pill-good">{{ emp.rating_category }}</span>
+                {% elif emp.rating_category == 'Average' %}
+                  <span class="pill-status pill-average">{{ emp.rating_category }}</span>
+                {% else %}
+                  <span class="pill-status pill-improvement">{{ emp.rating_category }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="btn-saas-secondary text-decoration-none py-1 px-2" style="font-size: 0.78rem;">
+                  <i class="bi bi-eye"></i> View
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <div class="py-3">
+                <i class="bi bi-trophy text-muted fs-3 mb-2 d-block"></i>
+                <div class="fw-semibold">No evaluated employees found</div>
+                <div class="small">Try selecting another department or conduct new evaluations.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — PerfPulse HR Analytics{% endblock %}
+
+{% block greeting_title %}Good afternoon, {{ session.get('full_name', 'Alexander').split(' ')[0] }} 👋{% endblock %}
+{% block greeting_sub %}Here's what's happening with your team today.{% endblock %}
+
+{% block content %}
+<!-- 1. Four Compact Asymmetric KPI Cards -->
+<div class="row g-3 mb-4">
+  <!-- KPI 1: Employees -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Employees</span>
+          <div class="kpi-icon-container kpi-icon-indigo">
+            <i class="bi bi-people"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.total_employees }}</span>
+          <span class="kpi-trend-pill trend-up">
+            <i class="bi bi-arrow-up-short"></i> +2 this month
+          </span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Across {{ stats.total_departments }} departments</div>
+    </div>
+  </div>
+
+  <!-- KPI 2: Average Performance -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Average Performance</span>
+          <div class="kpi-icon-container kpi-icon-sage">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.avg_score }}%</span>
+          <span class="kpi-trend-pill trend-up">
+            <i class="bi bi-arrow-up-short"></i> +4.2% from last month
+          </span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2 d-flex align-items-center gap-2">
+        <span class="pill-status pill-{{ stats.avg_category_badge }}" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+          {{ stats.avg_category }}
+        </span>
+        <span>Org health</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI 3: Goals Completed -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Goals Completed</span>
+          <div class="kpi-icon-container kpi-icon-peach">
+            <i class="bi bi-bullseye"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.goals_pct }}%</span>
+          <span class="kpi-trend-pill trend-subtle">Target 75%</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">{{ stats.completed_goals }} of {{ stats.total_goals }} active goals</div>
+    </div>
+  </div>
+
+  <!-- KPI 4: Needs Attention -->
+  <div class="col-xl-3 col-sm-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Needs Attention</span>
+          <div class="kpi-icon-container kpi-icon-red">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats.needs_improvement_count }}</span>
+          <span class="kpi-trend-pill trend-warning">Action required</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">
+        {% if stats.needs_improvement_count > 0 %}
+          {{ stats.needs_improvement_count }} employee below target
+        {% else %}
+          All employees on track
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Main Analytics Area (65 / 35 Layout) -->
+<div class="row g-3 mb-4">
+  <!-- Left (65%): Performance Overview Line/Area Chart -->
+  <div class="col-lg-8">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">Performance Overview</h6>
+          <p class="text-muted small mt-1">Average evaluation score trajectory over review cycles</p>
+        </div>
+        <!-- Time Filter Buttons -->
+        <div class="d-flex align-items-center gap-1">
+          <button type="button" class="btn-filter-pill" onclick="setActiveFilter(this)">6 Months</button>
+          <button type="button" class="btn-filter-pill active" onclick="setActiveFilter(this)">1 Year</button>
+          <button type="button" class="btn-filter-pill" onclick="setActiveFilter(this)">All</button>
+        </div>
+      </div>
+      <div class="card-body-clean" style="height: 310px;">
+        <canvas id="performanceTrendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right (35%): Performance Distribution Doughnut Chart -->
+  <div class="col-lg-4">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">Performance Distribution</h6>
+          <p class="text-muted small mt-1">Employee rating category breakdown</p>
+        </div>
+      </div>
+      <div class="card-body-clean d-flex flex-column justify-content-center" style="height: 310px;">
+        <canvas id="categoryDistributionChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Spotlight + Department Performance + Quick Actions -->
+<div class="row g-3 mb-4">
+  <!-- Top Performer Spotlight Card -->
+  <div class="col-lg-4">
+    <div class="spotlight-card h-100 d-flex flex-column justify-content-between">
+      <div class="spotlight-accent-bar"></div>
+      <div>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <span class="pill-status pill-outstanding">
+            <i class="bi bi-star-fill text-warning"></i> Top Performer Spotlight
+          </span>
+          <span class="text-muted small">Q1 Cycle</span>
+        </div>
+
+        {% if top_employee %}
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="avatar-initials">
+              {{ top_employee.full_name[:2].upper() }}
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0 text-dark">{{ top_employee.full_name }}</h5>
+              <div class="small text-muted">{{ top_employee.job_position }} &bull; {{ top_employee.dept_name }}</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center justify-content-between p-3 rounded mb-3" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+            <div>
+              <div class="small text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Performance Score</div>
+              <div class="fs-3 fw-bold text-dark">{{ top_employee.total_score }}<span class="text-muted fs-6">/100</span></div>
+            </div>
+            <span class="pill-status pill-outstanding">Outstanding</span>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+              <span>Goal Completion Rate</span>
+              <strong class="text-dark">{{ top_emp_goals_pct }}%</strong>
+            </div>
+            <div class="progress" style="height: 6px; border-radius: var(--radius-full); background: #F2F4F7;">
+              <div class="progress-bar" style="width: {{ top_emp_goals_pct }}%; background-color: var(--sage-green);"></div>
+            </div>
+          </div>
+        {% else %}
+          <div class="text-center py-4 text-muted">No evaluations on record yet.</div>
+        {% endif %}
+      </div>
+
+      {% if top_employee %}
+        <a href="{{ url_for('employee_profile', emp_id=top_employee.id) }}" class="btn-saas-secondary w-100 justify-content-center text-decoration-none">
+          View Profile &rarr;
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Department Performance Card -->
+  <div class="col-lg-5">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">Department Performance</h6>
+          <p class="text-muted small mt-1">Average scores across functional groups</p>
+        </div>
+        <a href="{{ url_for('departments_list') }}" class="btn-saas-secondary text-decoration-none py-1 px-2" style="font-size: 0.78rem;">
+          View All
+        </a>
+      </div>
+      <div class="card-body-clean py-2">
+        {% if dept_perf_rows %}
+          {% set bar_classes = ['bar-indigo', 'bar-sage', 'bar-peach', 'bar-sky'] %}
+          {% for d in dept_perf_rows %}
+            <div class="dept-row">
+              <div style="min-width: 130px;">
+                <div class="dept-name text-truncate">{{ d.name }}</div>
+                <div class="dept-count">{{ d.emp_count }} employees</div>
+              </div>
+              <div class="dept-progress-wrap">
+                <div class="dept-bar">
+                  <div class="dept-bar-fill {{ bar_classes[loop.index0 % 4] }}" style="width: {{ d.avg_score if d.avg_score > 0 else 10 }}%;"></div>
+                </div>
+              </div>
+              <div class="dept-score-val">
+                {% if d.avg_score > 0 %}
+                  {{ d.avg_score }}%
+                {% else %}
+                  <span class="text-muted fw-normal small">N/A</span>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="py-4 text-center text-muted">No departments found.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Menu -->
+  <div class="col-lg-3">
+    <div class="saas-card h-100 d-flex flex-column justify-content-between">
+      <div class="card-header-clean">
+        <h6 class="mb-0">Quick Actions</h6>
+      </div>
+      <div class="card-body-clean d-flex flex-column gap-2 py-3">
+        <button type="button" class="btn-saas-primary w-100 justify-content-start" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+          <i class="bi bi-person-plus"></i>
+          <span>Add Employee</span>
+        </button>
+        <button type="button" class="btn-saas-secondary w-100 justify-content-start" data-bs-toggle="modal" data-bs-target="#quickGoalModal">
+          <i class="bi bi-bullseye"></i>
+          <span>Create Goal</span>
+        </button>
+        <a href="{{ url_for('new_evaluation') }}" class="btn-saas-secondary w-100 justify-content-start text-decoration-none">
+          <i class="bi bi-clipboard-plus"></i>
+          <span>New Evaluation</span>
+        </a>
+        <a href="{{ url_for('reports_view') }}" class="btn-saas-secondary w-100 justify-content-start text-decoration-none">
+          <i class="bi bi-file-earmark-bar-graph"></i>
+          <span>Generate Report</span>
+        </a>
+      </div>
+      <div class="px-4 py-2 bg-light border-top text-center" style="font-size: 0.72rem; color: var(--text-muted);">
+        PerfPulse HR SaaS &bull; Fast Action Menu
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Needs Attention & Recent Activity (Split View) -->
+<div class="row g-3 mb-4">
+  <!-- Needs Attention Card -->
+  <div class="col-lg-6">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0"><i class="bi bi-exclamation-circle text-danger me-2"></i>Needs Attention</h6>
+          <p class="text-muted small mt-1">Employees with low scores, pending reviews, or below target</p>
+        </div>
+      </div>
+      <div class="card-body-clean p-3">
+        {% if needs_attention_rows %}
+          {% for emp in needs_attention_rows %}
+            <div class="needs-attention-row">
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar-sm" style="background: var(--light-red); color: var(--soft-red); font-weight: 700;">
+                  {{ emp.full_name[:2].upper() }}
+                </div>
+                <div>
+                  <div class="fw-semibold small text-dark">{{ emp.full_name }}</div>
+                  <div class="text-muted small" style="font-size: 0.75rem;">{{ emp.job_position }} &bull; {{ emp.dept_name }}</div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="pill-status pill-improvement" style="font-size: 0.72rem;">Score {{ emp.total_score }}%</span>
+                <a href="{{ url_for('new_evaluation', emp_id=emp.id) }}" class="btn-saas-secondary py-1 px-2" style="font-size: 0.75rem;">
+                  Review
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="p-4 text-center text-muted small">
+            <i class="bi bi-check2-circle text-success fs-4 d-block mb-1"></i>
+            All employees are meeting or exceeding current performance targets.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity Timeline -->
+  <div class="col-lg-6">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity</h6>
+          <p class="text-muted small mt-1">Real-time team events and milestone achievements</p>
+        </div>
+      </div>
+      <div class="card-body-clean p-3">
+        {% for act in recent_activities %}
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background-color: var(--light-{{ act.theme }}); color: var(--{{ act.theme }}-dark, var(--primary-indigo));">
+              <i class="bi {{ act.icon }}"></i>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-text">{{ act.title }}</div>
+              <div class="timeline-time">{{ act.user }} &bull; {{ act.dept }} &bull; {{ act.time }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Team Overview Table Section (Bottom) -->
+<div class="saas-card mb-4">
+  <div class="card-header-clean flex-wrap gap-2">
+    <div>
+      <h6 class="mb-0">Team Overview</h6>
+      <p class="text-muted small mt-1">Employee directory and quarterly performance standings</p>
+    </div>
+    <!-- Search & Filters -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="header-search-box" style="width: 180px;">
+        <i class="bi bi-search"></i>
+        <input type="text" id="tableSearchInput" placeholder="Filter employee...">
+      </div>
+      <select class="form-select form-select-sm" id="deptFilterSelect" style="width: 160px; font-size: 0.8rem; border-radius: var(--radius-full); border-color: var(--border-color);">
+        <option value="">All Departments</option>
+        {% for d in dept_perf_rows %}
+          <option value="{{ d.name }}">{{ d.name }}</option>
+        {% endfor %}
+      </select>
+      <a href="{{ url_for('employees_list') }}" class="btn-saas-secondary py-1 px-3 text-decoration-none" style="font-size: 0.8rem;">
+        View Directory
+      </a>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="saas-table filterable-table" id="teamOverviewTable">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Goals Active</th>
+          <th>Performance</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if team_overview_rows %}
+          {% for emp in team_overview_rows %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar-sm">
+                    {{ emp.full_name[:2].upper() }}
+                  </div>
+                  <div>
+                    <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="fw-semibold text-dark text-decoration-none">
+                      {{ emp.full_name }}
+                    </a>
+                    <div class="text-muted small" style="font-size: 0.75rem;">{{ emp.job_position }} &bull; {{ emp.emp_code }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="text-secondary small fw-medium">{{ emp.dept_name or 'Unassigned' }}</span>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">
+                  {{ emp.active_goals_count }} Active
+                </span>
+              </td>
+              <td>
+                {% if emp.latest_score is not none %}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold">{{ emp.latest_score }}%</span>
+                    <div class="progress flex-grow-1" style="height: 5px; width: 60px; background: #F2F4F7;">
+                      <div class="progress-bar {% if emp.latest_score >= 90 %}bg-success{% elif emp.latest_score >= 80 %}bg-primary{% elif emp.latest_score >= 70 %}bg-info{% elif emp.latest_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                           style="width: {{ emp.latest_score }}%;"></div>
+                    </div>
+                  </div>
+                {% else %}
+                  <span class="text-muted small">Pending review</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if emp.rating_category == 'Outstanding' %}
+                  <span class="pill-status pill-outstanding">Outstanding</span>
+                {% elif emp.rating_category == 'Excellent' %}
+                  <span class="pill-status pill-excellent">Excellent</span>
+                {% elif emp.rating_category == 'Good' %}
+                  <span class="pill-status pill-good">Good</span>
+                {% elif emp.rating_category == 'Average' %}
+                  <span class="pill-status pill-average">Average</span>
+                {% elif emp.rating_category == 'Needs Improvement' %}
+                  <span class="pill-status pill-improvement">Needs Improvement</span>
+                {% else %}
+                  <span class="pill-status" style="background: #F2F4F7; color: var(--text-muted);">Unrated</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="btn btn-outline-secondary border-0" title="View Profile">
+                    <i class="bi bi-eye text-muted"></i>
+                  </a>
+                  <a href="{{ url_for('new_evaluation', emp_id=emp.id) }}" class="btn btn-outline-secondary border-0" title="Evaluate">
+                    <i class="bi bi-clipboard-check text-primary"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">No employees registered in the system.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Quick Add Employee -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form action="{{ url_for('employee_create') }}" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Add New Employee</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-clean">Employee Code *</label>
+              <input type="text" class="form-control-clean" name="emp_code" placeholder="e.g. EMP012" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-clean">Full Name *</label>
+              <input type="text" class="form-control-clean" name="full_name" placeholder="First & Last Name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-clean">Email Address *</label>
+              <input type="email" class="form-control-clean" name="email" placeholder="name@company.com" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-clean">Phone</label>
+              <input type="text" class="form-control-clean" name="phone" placeholder="+1-555-0100">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-clean">Department *</label>
+              <select name="department_id" class="form-select-clean" required>
+                <option value="">Select Department</option>
+                {% for d in dept_perf_rows %}
+                  <option value="{{ d.id }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-clean">Job Position *</label>
+              <input type="text" class="form-control-clean" name="job_position" placeholder="e.g. Software Engineer" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-clean">Joining Date *</label>
+              <input type="date" class="form-control-clean" name="joining_date" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-saas-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-saas-primary">Create Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Quick Create Goal -->
+<div class="modal fade" id="quickGoalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form action="{{ url_for('goal_create') }}" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Create Employee Goal</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label-clean">Employee *</label>
+            <select name="employee_id" class="form-select-clean" required>
+              <option value="">Select Employee</option>
+              {% for emp in team_overview_rows %}
+                <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.emp_code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-clean">Goal Title *</label>
+            <input type="text" class="form-control-clean" name="title" placeholder="e.g. Refactor API endpoints" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-clean">Description</label>
+            <textarea class="form-control-clean" name="description" rows="2" placeholder="Key outcomes expected..."></textarea>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label-clean">Priority</label>
+              <select name="priority" class="form-select-clean">
+                <option value="High">High</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label-clean">Deadline *</label>
+              <input type="date" class="form-control-clean" name="deadline" required>
+            </div>
+          </div>
+          <input type="hidden" name="assigned_date" value="{{ today_date }}">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-saas-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-saas-primary">Assign Goal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const deptData = {{ chart_dept_data | tojson | safe }};
+    const categoryData = {{ chart_category_data | tojson | safe }};
+    const trendData = {{ chart_trend_data | tojson | safe }};
+    initAdminCharts(deptData, categoryData, trendData);
+
+    // Filter button interactive toggle
+    window.setActiveFilter = function(btn) {
+      document.querySelectorAll('.btn-filter-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+
+    // Department Filter dropdown in Team Overview table
+    const deptSelect = document.getElementById('deptFilterSelect');
+    if (deptSelect) {
+      deptSelect.addEventListener('change', function () {
+        const val = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#teamOverviewTable tbody tr');
+        rows.forEach(r => {
+          const text = r.children[1] ? r.children[1].innerText.toLowerCase() : '';
+          r.style.display = (!val || text.includes(val)) ? '' : 'none';
+        });
+      });
+    }
+  });
+</script>
+{% endblock %}

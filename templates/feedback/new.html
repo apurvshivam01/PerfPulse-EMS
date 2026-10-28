@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Provide Employee Feedback — PerfPulse{% endblock %}
+{% block page_title %}Provide Feedback{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+    <!-- Breadcrumb & Header -->
+    <div class="d-flex align-items-center gap-2 mb-3 text-muted small">
+      <a href="{{ url_for('feedback_list') }}" class="text-muted text-decoration-none hover-indigo">Feedback Log</a>
+      <span>/</span>
+      <span class="text-dark fw-medium">Give Feedback</span>
+    </div>
+
+    <div class="saas-card mb-4">
+      <!-- Card Header -->
+      <div class="card-header-clean py-3 px-4">
+        <div>
+          <h5 class="mb-1" style="font-size: 1.05rem;">
+            <i class="bi bi-chat-heart text-primary me-2"></i>Performance Coaching & Feedback Form
+          </h5>
+          <p class="text-muted small mb-0">Record qualitative strengths, areas for development, and recommended next steps.</p>
+        </div>
+      </div>
+
+      <!-- Card Body Form -->
+      <div class="card-body-clean p-4">
+        <form action="{{ url_for('feedback_create') }}" method="POST">
+          <!-- Employee & Date Row -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-7">
+              <label class="form-label-clean">Employee Target <span class="text-danger">*</span></label>
+              <select name="employee_id" class="form-select-clean" required>
+                <option value="">Select Employee to Review...</option>
+                {% for emp in assignable_employees %}
+                  <option value="{{ emp.id }}" {% if preselected_emp_id == emp.id|string %}selected{% endif %}>
+                    {{ emp.full_name }} ({{ emp.emp_code }} &bull; {{ emp.job_position }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label-clean">Feedback Date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control-clean" name="feedback_date" value="{{ today_date }}" required>
+            </div>
+          </div>
+
+          <!-- Section: Strengths -->
+          <div class="mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label-clean mb-0 d-flex align-items-center gap-2">
+                <span class="pill-status pill-outstanding" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                  <i class="bi bi-hand-thumbs-up"></i> Strengths
+                </span>
+                <span>Core Strengths & Highlights <span class="text-danger">*</span></span>
+              </label>
+              <span class="text-muted small" style="font-size: 0.75rem;">Required</span>
+            </div>
+            <textarea class="form-control-clean" name="strengths" rows="3" style="height: auto; min-height: 85px;" placeholder="Highlight specific projects, behaviors, technical abilities, or exceptional team contributions..." required></textarea>
+            <div class="form-text small text-muted mt-1">What did this employee excel at during this period?</div>
+          </div>
+
+          <!-- Section: Areas for Improvement -->
+          <div class="mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label-clean mb-0 d-flex align-items-center gap-2">
+                <span class="pill-status pill-improvement" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                  <i class="bi bi-arrow-up-right-circle"></i> Growth
+                </span>
+                <span>Areas for Improvement <span class="text-danger">*</span></span>
+              </label>
+              <span class="text-muted small" style="font-size: 0.75rem;">Required</span>
+            </div>
+            <textarea class="form-control-clean" name="areas_for_improvement" rows="3" style="height: auto; min-height: 85px;" placeholder="Detail skills, time management, communication cadence, or execution aspects needing refinement..." required></textarea>
+            <div class="form-text small text-muted mt-1">Constructive feedback on where the employee can develop further.</div>
+          </div>
+
+          <!-- Section: General Comments -->
+          <div class="mb-4">
+            <label class="form-label-clean mb-2 d-flex align-items-center gap-2">
+              <span class="pill-status pill-good" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                <i class="bi bi-chat-quote"></i> General
+              </span>
+              <span>General Observations (Optional)</span>
+            </label>
+            <textarea class="form-control-clean" name="general_comments" rows="2" style="height: auto; min-height: 70px;" placeholder="Overall work ethic, team sentiment, alignment with company values..."></textarea>
+          </div>
+
+          <!-- Section: Recommendations -->
+          <div class="mb-4">
+            <label class="form-label-clean mb-2 d-flex align-items-center gap-2">
+              <span class="pill-status pill-excellent" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                <i class="bi bi-lightbulb"></i> Next Steps
+              </span>
+              <span>Recommendations & Action Plan (Optional)</span>
+            </label>
+            <textarea class="form-control-clean" name="recommendations" rows="2" style="height: auto; min-height: 70px;" placeholder="Recommended courses, mentorship pairing, leadership opportunities, or upcoming milestone projects..."></textarea>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="d-flex align-items-center justify-content-end gap-2 pt-3 border-top" style="border-color: var(--border-color) !important;">
+            <a href="{{ url_for('feedback_list') }}" class="btn-saas-secondary text-decoration-none">
+              Cancel
+            </a>
+            <button type="submit" class="btn-saas-primary">
+              <i class="bi bi-send me-1"></i> Submit Feedback
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

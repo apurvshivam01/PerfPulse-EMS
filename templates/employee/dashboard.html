@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}My Performance — PerfPulse{% endblock %}
+
+{% block greeting_title %}Welcome back, {{ employee.full_name }} 👋{% endblock %}
+{% block greeting_sub %}{{ employee.job_position }} &bull; {{ employee.dept_name }} &bull; Reporting to: {{ employee.manager_name or 'General Management' }}{% endblock %}
+
+{% block content %}
+<!-- Top Metric Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-4 col-md-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Current Performance</span>
+          <div class="kpi-icon-container kpi-icon-indigo">
+            <i class="bi bi-speedometer2"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          {% if latest_review %}
+            <span class="kpi-value">{{ latest_review.total_score }}%</span>
+            <span class="pill-status pill-{% if latest_review.rating_category == 'Outstanding' %}outstanding{% elif latest_review.rating_category == 'Excellent' %}excellent{% elif latest_review.rating_category == 'Good' %}good{% elif latest_review.rating_category == 'Average' %}average{% else %}improvement{% endif %}">
+              {{ latest_review.rating_category }}
+            </span>
+          {% else %}
+            <span class="kpi-value text-muted" style="font-size: 1.25rem;">Pending</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">
+        {% if latest_review %}Cycle: {{ latest_review.review_period }}{% else %}Awaiting initial review cycle{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4 col-md-6">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Goal Completion Rate</span>
+          <div class="kpi-icon-container kpi-icon-sage">
+            <i class="bi bi-check2-circle"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ avg_goal_completion }}%</span>
+          <span class="kpi-trend-pill trend-up">{{ completed_goals_count }} of {{ total_goals_count }} done</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Active targets in progress</div>
+    </div>
+  </div>
+
+  <div class="col-xl-4 col-md-12">
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-header">
+          <span class="kpi-title">Pending Goals</span>
+          <div class="kpi-icon-container kpi-icon-peach">
+            <i class="bi bi-flag"></i>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ active_goals_count }}</span>
+          <span class="kpi-trend-pill trend-subtle">Assigned OKRs</span>
+        </div>
+      </div>
+      <div class="kpi-subtext mt-2">Open deliverables scheduled</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- My Assigned Goals Card -->
+  <div class="col-lg-7">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">My Assigned Goals & OKRs</h6>
+          <p class="text-muted small mt-1">Update your progress and completion milestones</p>
+        </div>
+        <a href="{{ url_for('goals_list') }}" class="btn-saas-secondary py-1 px-2 text-decoration-none" style="font-size: 0.78rem;">
+          Manage Goals
+        </a>
+      </div>
+      <div class="card-body-clean p-0">
+        <div class="list-group list-group-flush">
+          {% if goals %}
+            {% for g in goals[:4] %}
+              <div class="list-group-item p-3 border-0 border-bottom">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <div>
+                    <div class="fw-semibold small text-dark">{{ g.title }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Due: {{ g.deadline }} &bull; Priority: {{ g.priority }}</div>
+                  </div>
+                  <span class="pill-status {% if g.status == 'Completed' %}pill-outstanding{% elif g.status == 'In Progress' %}pill-excellent{% else %}pill-average{% endif %}">
+                    {{ g.status }}
+                  </span>
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <div class="progress flex-grow-1" style="height: 5px; background: #F2F4F7;">
+                    <div class="progress-bar {% if g.completion_percentage == 100 %}bg-success{% elif g.completion_percentage > 50 %}bg-primary{% else %}bg-warning{% endif %}" 
+                         style="width: {{ g.completion_percentage }}%;"></div>
+                  </div>
+                  <span class="small text-muted" style="font-size: 0.75rem;">{{ g.completion_percentage }}%</span>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="p-4 text-center text-muted small">No goals currently assigned.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Latest Feedback from Manager -->
+  <div class="col-lg-5">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <div>
+          <h6 class="mb-0">Manager Coaching Feedback</h6>
+          <p class="text-muted small mt-1">Supervisory guidance & growth areas</p>
+        </div>
+        <a href="{{ url_for('feedback_list') }}" class="btn-saas-secondary py-1 px-2 text-decoration-none" style="font-size: 0.78rem;">
+          View All
+        </a>
+      </div>
+      <div class="card-body-clean p-3">
+        {% if latest_feedback %}
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <span class="fw-semibold small text-dark">From: {{ latest_feedback.manager_name }}</span>
+            <span class="text-muted small">{{ latest_feedback.feedback_date }}</span>
+          </div>
+
+          <div class="mb-3">
+            <span class="pill-status pill-outstanding mb-1" style="font-size: 0.7rem;">Key Strengths</span>
+            <p class="small text-secondary mb-0 p-2 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+              {{ latest_feedback.strengths }}
+            </p>
+          </div>
+
+          <div class="mb-3">
+            <span class="pill-status pill-average mb-1" style="font-size: 0.7rem;">Growth Areas</span>
+            <p class="small text-secondary mb-0 p-2 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+              {{ latest_feedback.areas_for_improvement }}
+            </p>
+          </div>
+
+          {% if latest_feedback.recommendations %}
+            <div>
+              <span class="pill-status pill-excellent mb-1" style="font-size: 0.7rem;">Recommendations</span>
+              <p class="small text-secondary mb-0 p-2 rounded" style="background-color: #FAFBFD; border: 1px solid var(--border-color);">
+                {{ latest_feedback.recommendations }}
+              </p>
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="text-center py-4 text-muted small">
+            <i class="bi bi-chat-quote fs-3 d-block mb-1 text-secondary"></i>
+            No feedback entries logged yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- History Line Chart & Table -->
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <h6 class="mb-0">My Performance Trend</h6>
+      </div>
+      <div class="card-body-clean" style="height: 260px;">
+        <canvas id="employeeHistoryChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="saas-card h-100">
+      <div class="card-header-clean">
+        <h6 class="mb-0">Historical Scores</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="saas-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Date</th>
+              <th>Score</th>
+              <th>Rating</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if reviews %}
+              {% for r in reviews %}
+                <tr>
+                  <td class="fw-semibold small text-dark">{{ r.review_period }}</td>
+                  <td class="small text-muted">{{ r.review_date }}</td>
+                  <td class="fw-bold">{{ r.total_score }}%</td>
+                  <td>
+                    <span class="pill-status pill-{% if r.rating_category == 'Outstanding' %}outstanding{% elif r.rating_category == 'Excellent' %}excellent{% elif r.rating_category == 'Good' %}good{% elif r.rating_category == 'Average' %}average{% else %}improvement{% endif %}">
+                      {{ r.rating_category }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4" class="text-center py-3 text-muted small">No evaluation history yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const periods = {{ chart_periods | tojson | safe }};
+    const scores = {{ chart_scores | tojson | safe }};
+    initEmployeeHistoryChart(periods, scores);
+  });
+</script>
+{% endblock %}

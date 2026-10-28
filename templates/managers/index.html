@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Leadership Directory — PerfPulse{% endblock %}
+
+{% block greeting_title %}Manager Leadership Directory{% endblock %}
+{% block greeting_sub %}Review department leads, management structures, and team allocations.{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Register Manager Card -->
+  <div class="col-lg-4">
+    <div class="saas-card p-4">
+      <h6 class="fw-bold mb-1">Register New Manager</h6>
+      <p class="text-muted small mb-3">Creates a manager account with team supervisory capabilities.</p>
+      
+      <div class="alert alert-info py-2 small mb-3 border" style="border-radius: 8px;">
+        <i class="bi bi-info-circle me-1"></i> Account role will be set to <strong>Manager</strong>. Default password: <code>manager123</code>.
+      </div>
+
+      <form action="{{ url_for('manager_create') }}" method="POST">
+        <div class="mb-3">
+          <label class="form-label-clean">Manager Code *</label>
+          <input type="text" class="form-control-clean" name="emp_code" placeholder="MGR003" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-clean">Full Name *</label>
+          <input type="text" class="form-control-clean" name="full_name" placeholder="First & Last Name" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-clean">Email Address *</label>
+          <input type="email" class="form-control-clean" name="email" placeholder="manager@company.com" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-clean">Phone</label>
+          <input type="text" class="form-control-clean" name="phone" placeholder="+1-555-0100">
+        </div>
+        <div class="mb-3">
+          <label class="form-label-clean">Department *</label>
+          <select name="department_id" class="form-select-clean" required>
+            <option value="">Select Department</option>
+            {% for d in departments %}
+              <option value="{{ d.id }}">{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-clean">Job Position *</label>
+          <input type="text" class="form-control-clean" name="job_position" placeholder="e.g. Engineering Director" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-clean">Joining Date *</label>
+          <input type="date" class="form-control-clean" name="joining_date" required>
+        </div>
+        <button type="submit" class="btn-saas-primary w-100 justify-content-center">
+          <i class="bi bi-person-plus"></i> Register Manager
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Managers Table List -->
+  <div class="col-lg-8">
+    <div class="saas-card">
+      <div class="card-header-clean">
+        <h6 class="mb-0">Existing Team Managers</h6>
+        <span class="pill-status pill-excellent">{{ managers|length }} Supervisors</span>
+      </div>
+      <div class="table-responsive">
+        <table class="saas-table">
+          <thead>
+            <tr>
+              <th>Manager</th>
+              <th>Code</th>
+              <th>Department</th>
+              <th>Position</th>
+              <th>Team Size</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if managers %}
+              {% for m in managers %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="avatar-sm" style="background: var(--light-indigo); color: var(--primary-indigo);">
+                        {{ m.full_name[:2].upper() }}
+                      </div>
+                      <div>
+                        <div class="fw-semibold text-dark">{{ m.full_name }}</div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">{{ m.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ m.emp_code }}</span></td>
+                  <td><span class="text-secondary small">{{ m.dept_name or 'Unassigned' }}</span></td>
+                  <td><span class="text-secondary small">{{ m.job_position }}</span></td>
+                  <td>
+                    <span class="pill-status pill-good" style="font-size: 0.72rem;">{{ m.team_size }} Direct Reports</span>
+                  </td>
+                  <td class="small text-muted">{{ m.joining_date }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="6" class="text-center py-4 text-muted small">No managers registered.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
